@@ -1,5 +1,5 @@
 import { entries, objectFromTuples, objectFromTuplesAsync } from "../object"
-import { isAsyncIterable, type Rec, isIterable, Tuple, type TypeGuard, type Primitive, hasValue, type IterableRecursive, type ArrayRecursive } from "../common"
+import { isAsyncIterable, type Rec, isIterable, Tuple, type TypeGuard, type Primitive, hasValue, type IterableRecursive, type ArrayRecursive, assert, isIntegerAndSafe } from "../common"
 import type { Zip, ZipAsync, Predicate, PredicateAsync, Projector, ProjectorAsync, Reducer, ReducerAsync, Ranker, CollectionIndexed, CollectionFinite } from "./types"
 
 type UnwrapIterable1<T> = T extends Iterable<infer X> ? X : T
@@ -7,32 +7,120 @@ type UnwrapIterable2<T> = T extends Iterable<infer X> ? UnwrapIterable1<X> : T
 type UnwrapIterable3<T> = T extends Iterable<infer X> ? UnwrapIterable2<X> : T
 export type UnwrapNestedIterable<T> = T extends Iterable<infer X> ? UnwrapIterable3<X> : T
 
+/** Generates a sequence of integers, starting from the integer specified by the "from" argument, each more than the previous one by 
+ * the magnitude of the "step" argument (defaulting to 1), and stopping at the integer specified by the "to" argument (if supplied), 
+ * or else indefinitely 
+ */
+export function* integersAscending(args: { from: number, to?: number, step?: number }) {
+	const { from, to, step } = args
+	const _to = to ?? Number.MAX_SAFE_INTEGER
+	const _step = step ?? 1
 
-/** Generate a sequence of integers */
-export function* integers(args: { from: number, to: number } | { from: number, direction: "upwards" | "downwards" }) {
-	let num = args.from
-	do {
-		yield ("to" in args ? args.to >= args.from : args.direction === "upwards") ? num++ : num--
+	assert(isIntegerAndSafe(from), `integersAscending(): the "from" argument's value (${from}) is not a valid/safe integer`)
+	assert(isIntegerAndSafe(_to), `integersAscending(): the "to" argument's value (${to}) is not a valid/safe integer`)
+	assert(isIntegerAndSafe(_step), `integersAscending(): the "step" argument (${step}) is not a valid/safe integer`)
+	assert(_step >= 1, `integersAscending(): Step argument ${step} not a positive non-zero integer`)
+	assert(from <= _to, `integersAscending(): Start integer ${from} greater than end integer ${to}`)
+
+	let num = from
+	while (num <= _to) {
+		yield num
+		num += _step
 	}
-	while ("direction" in args || args.from !== args.to)
+}
+/** Generates a sequence of big integers, starting from the integer specified by the "from" argument, each more than the previous one by 
+ * the magnitude of the "step" argument (defaulting to 1), and stopping at the integer specified by the "to" argument (if supplied), 
+ * or else indefinitely 
+ */
+export function* bigIntegersAscending(args: { from: bigint, to?: bigint, step?: bigint }) {
+	const { from, to, step } = args
+	const _step = step ?? 1n
+
+	assert(typeof from === "bigint", `bigIntegersAscending(): the "from" argument (${from}) is not a big integer`)
+	assert(hasValue(to) === false || typeof to === "bigint", `bigIntegersAscending(): the "to" argument (${to}) is not a big integer`)
+	assert(typeof _step === "bigint", `bigIntegersAscending(): the "step" argument (${step}) is not a big integer`)
+	assert(_step >= 1, `bigIntegersAscending(): Step argument ${step} not a positive non-zero integer`)
+	assert(hasValue(to) === false || from <= to, `bigIntegersAscending(): Start integer ${from} greater than end integer ${to}`)
+
+	let num = from
+	while (hasValue(to) === false || num <= to) {
+		yield num
+		num += _step
+	}
 }
 
-/** Generate sequence of numbers */
-export function* range(from: number, to: number, opts?: { mode: "width", width: number } | { mode: "count", count: number }) {
+/** Generates a sequence of integers, starting from the integer specified by the "from" argument, each less than the previous one by 
+ * the magnitude of the "step" argument (defaulting to 1), and stopping at the integer specified by the "to" argument (if supplied), 
+ * or else indefinitely 
+ */
+export function* integersDescending(args: { from: number, to?: number, step?: number }) {
+	const { from, to, step } = args
+	const _to = to ?? Number.MIN_SAFE_INTEGER
+	const _step = step ?? 1
+
+	assert(isIntegerAndSafe(from), `integersDescending(): the "from" argument's value (${from}) is not a valid/safe integer`)
+	assert(isIntegerAndSafe(_to), `integersDescending(): the "to" argument's value (${to}) is not a valid/safe integer`)
+	assert(isIntegerAndSafe(_step), `integersDescending(): the "step" argument (${step}) is not a valid/safe integer`)
+	assert(_step >= 1, `integersDescending(): Step argument ${step} not a positive non-zero integer`)
+	assert(from >= _to, `integersDescending(): Start integer ${from} less than end integer ${to}`)
+
+	let num = from
+	while (num >= _to) {
+		yield num
+		num -= _step
+	}
+}
+/** Generates a sequence of big integers, starting from the integer specified by the "from" argument, each less than the previous one by 
+ * the magnitude of the "step" argument (defaulting to 1), and stopping at the integer specified by the "to" argument (if supplied), 
+ * or else indefinitely 
+ */
+export function* bigIntegersDescending(args: { from: bigint, step?: bigint, to?: bigint }) {
+	const { from, to, step } = args
+	const _step = step ?? 1n
+
+	assert(typeof from === "bigint", `bigIntegersDescending(): the "from" argument (${from}) is not a big integer`)
+	assert(hasValue(to) === false || typeof to === "bigint", `bigIntegersDescending(): the "to" argument (${to}) is not a big integer`)
+	assert(typeof _step === "bigint", `bigIntegersDescending(): the "step" argument (${step}) is not a big integer`)
+	assert(_step >= 1, `bigIntegersDescending(): Step argument ${step} not a positive non-zero integer`)
+	assert(hasValue(to) === false || from <= to, `bigIntegersDescending(): Start integer ${from} greater than end integer ${to}`)
+
+	let num = from
+	while (hasValue(to) === false || num <= to) {
+		yield num
+		num += _step
+	}
+}
+
+/** Generates a sequence of consecutive integers between two integers (inclusive) in the direction implied by their relative magnitudes */
+export function* integersBetween(from: number, to: number) {
+	assert(Number.isNaN(from) === false)
+	assert(Number.isNaN(to) === false)
+
+	assert(Number.isInteger(from))
+	assert(Number.isInteger(to))
+
+	if (from === to) {
+		yield from
+	}
+	else {
+		let num = from
+		do {
+			yield from < to ? num++ : num--
+		}
+		while (from !== to)
+	}
+}
+
+/** Generates a sequence of equally spaced numbers between two values, based on an interval or a count */
+export function* numbersEquallySpaced(from: number, to: number, opts?: { interval: number } | { count: number }) {
 	if (opts) {
-		if (opts.mode === "width" && opts.width <= 0) throw new Error("width must be positive non-zero number")
-		if (opts.mode === "count" && opts.count <= 0) throw new Error("count must be positive non-zero number")
+		if ("interval" in opts && opts.interval <= 0) throw new Error("Interval must be positive non-zero number")
+		if ("count" in opts && opts.count <= 0) throw new Error("Count must be positive non-zero number")
 	}
 
 	const diff = to - from
 	const sign = to >= from ? 1 : -1
-	const delta = opts === undefined
-		? sign
-		: opts.mode === "width"
-			? (opts.width * sign)
-			: diff / opts.count
-
-
+	const delta = opts === undefined ? sign : "interval" in opts ? (opts.interval * sign) : diff / opts.count
 	const length = Math.floor(diff / delta) + 1
 
 	for (let i = 0; i < length; i++) {
@@ -40,9 +128,7 @@ export function* range(from: number, to: number, opts?: { mode: "width", width: 
 	}
 }
 
-/** Turns n iterables into an iterable of n-tuples
- * The shortest iterable determines the length of the result
- */
+/** Turns N iterables into an iterable of N-tuples. The shortest iterable determines the length of the result */
 export function zip<T extends readonly Iterable<unknown>[]>(...iterables: T): IterableIterator<Zip<T>> {
 	console.assert(iterables.every(iter => typeof iter[Symbol.iterator] === "function"))
 
@@ -67,7 +153,7 @@ export function zip<T extends readonly Iterable<unknown>[]>(...iterables: T): It
 		}
 	}
 }
-/** Turns n (possible async) iterables into an async iterable of n-tuples
+/** Turns N (possibly async) iterables into an async iterable of N-tuples
  * The shortest iterable determines the length of the resulting iterable
  */
 export async function* zipAsync<T extends readonly (AsyncIterable<unknown> | Iterable<unknown>)[]>(...iterables: T): AsyncIterable<ZipAsync<T>> {
@@ -129,15 +215,20 @@ export async function* zipAsync<T extends readonly (AsyncIterable<unknown> | Ite
 	}*/
 }
 
-/** Transform an iterable into another of tuples containing the a sequential index and the orginal values */
+/** Transforms an iterable collection into a sequence of tuples of the original values and
+ * a monotonically increasing zero-based integer index
+ */
 export function* indexed<T>(items: Iterable<T>, from = 0) {
-	yield* zip(integers({ from, direction: "upwards" }), items)
+	yield* zip(integersAscending({ from }), items)
 }
+/** Transforms an (possibly async) iterable collection into an async sequence of tuples of the original values and
+ * a monotonically increasing zero-based integer index
+ */
 export async function* indexedAsync<T>(items: Iterable<T> | AsyncIterable<T>, from = 0) {
-	yield* zipAsync(integers({ from, direction: "upwards" }), items)
+	yield* zipAsync(integersAscending({ from }), items)
 }
 
-/** Take n elements from start of sequence */
+/** Generates a sequence of N consecutive elements beginning from the start of the input iterable collection */
 export function* take<T>(iterable: Iterable<T>, n: number): Iterable<T> {
 	if (typeof n !== "number") throw new Error(`Invalid type ${typeof n} for argument "n"\nMust be number`)
 	if (n < 0) {
@@ -152,6 +243,7 @@ export function* take<T>(iterable: Iterable<T>, n: number): Iterable<T> {
 		}
 	}
 }
+/** Generates an async sequence of N consecutive elements beginning from the start of the input (possibly async) iterable collection */
 export async function* takeAsync<T>(collection: Iterable<T> | AsyncIterable<T>, n: number): AsyncIterable<T> {
 	if (typeof n !== "number") { throw new Error(`take(): Invalid type ${typeof n} for argument "n"\nMust be number`) }
 	if (n < 0) {
@@ -167,7 +259,7 @@ export async function* takeAsync<T>(collection: Iterable<T> | AsyncIterable<T>, 
 	}
 }
 
-/** Return all elements while a condition is not violated */
+/** Generates a sequence of elements of the input collection while a condition is not violated, but terminates as soon as it is violated */
 export function* takeWhile<X>(iterable: Iterable<X>, predicate: Predicate<X, number | void>): Iterable<X> {
 	if (typeof predicate !== "function") throw new Error(`Invalid type ${typeof predicate} for 2nd argument "predicate"\nMust be function`)
 
@@ -176,6 +268,9 @@ export function* takeWhile<X>(iterable: Iterable<X>, predicate: Predicate<X, num
 		else { break }
 	}
 }
+/** Generates an async sequence of elements of the input (possibly async) collection, as long as
+ * a condition is not violated, but terminates as soon as it is violated
+ */
 export async function* takeWhileAsync<X>(iterable: Iterable<X> | AsyncIterable<X>, predicate: PredicateAsync<X, number | void>): AsyncIterable<X> {
 	if (typeof predicate !== "function") { throw new Error(`Invalid type ${typeof predicate} for 2nd argument "predicate"\nMust be function`) }
 	for await (const element of indexedAsync(iterable)) {
@@ -184,9 +279,9 @@ export async function* takeWhileAsync<X>(iterable: Iterable<X> | AsyncIterable<X
 	}
 }
 
-/** Skip n elements from start of collection
- * If n is negative, no items are skipped
- * If n equals or exceeds the length of the collection, all items are skipped
+/** Generate the consecutive elements of a collection after skipping the first N elements.
+ * If N is negative, no items are skipped.
+ * If N equals or exceeds the length of the collection, all items are skipped
  */
 export function* skip<T>(iterable: Iterable<T>, n: number): Iterable<T> {
 	if (typeof n !== "number") { throw new Error(`Invalid type ${typeof n} for argument "n"\nMust be number`) }

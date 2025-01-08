@@ -1,5 +1,5 @@
 import { map } from "../collections"
-import { isPrimitive, isPromise, isArray, isObject, type Atomic } from "../common"
+import { isPrimitive, isPromise, isArray, isObject, type PrimitiveX } from "../common"
 import { objectFromTuples, entries } from "../object"
 
 export type AsyncFn<T, Args extends any[] = any[]> = (...args: Args) => Promise<T>
@@ -33,7 +33,7 @@ async function recursiveAwait<T>(val: T): Promise<AwaitedRecursive<T>> {
 }
 
 
-type AwaitedRecursive<T> = (T extends Atomic | null | undefined
+type AwaitedRecursive<T> = (T extends PrimitiveX | null | undefined
 	? T
 	: T extends Promise<infer P>
 	? AwaitedRecursive<P>

@@ -23,8 +23,8 @@ export type Fx<Ret, Args extends unknown[]> = (...args: Args) => Ret
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ArgsType<F extends (...x: any[]) => any> = F extends (...x: infer A) => unknown ? A : never
 
-export type Atomic = PrimitiveX | Function
-export type PrimitiveX = Primitive | bigint | symbol
+// export type Atomic = PrimitiveX | Function | Date
+export type PrimitiveX = Primitive | bigint | symbol | Date
 // export type NullablePrimitive = Primitive | null
 export type Primitive = string | number | boolean
 
@@ -344,6 +344,20 @@ export function isEmptyString(payload: unknown): payload is string {
  */
 export function isNumber(payload: unknown): payload is number {
 	return getType(payload) === 'Number' && !Number.isNaN(payload)
+}
+
+/** Returns whether the input is a regular integer within the bounds of the safe range
+ * This will return false for NaN
+ * @param {*} payload
+ * @returns {payload is number}
+ */
+export function isIntegerAndSafe(payload: unknown): payload is number {
+	return (
+		typeof payload === "number" &&
+		Number.isInteger(payload) &&
+		payload >= Number.MIN_SAFE_INTEGER &&
+		payload <= Number.MAX_SAFE_INTEGER
+	)
 }
 
 /** Returns whether the payload is a boolean

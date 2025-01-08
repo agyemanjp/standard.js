@@ -1,4 +1,4 @@
-# standard.js
+# Standard.js
 Standard library for JavaScript/TypeScript
 
 ## Features

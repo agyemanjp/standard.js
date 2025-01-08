@@ -1,7 +1,7 @@
 import { it, describe } from "bun:test"
 import assert from "assert"
 
-import { map, flatten, chunk, take, skip, first, firstAsync, last, reduce, reduceAsync, negate, flat } from "../source"
+import { map, flatten, chunk, take, skip, first, firstAsync, last, reduce, reduceAsync, negate, flat, integersAscending } from "../source"
 
 describe('flatten()', function () {
 	it('should return a result that excludes empty arrays', function () {
@@ -93,7 +93,6 @@ describe('flat()', function () {
 	})
 })
 
-// eslint-disable-next-line mocha/max-top-level-suites
 describe('take()', function () {
 	it('should return array with length equal to the smaller of input array length and take count', function () {
 		assert.deepStrictEqual([...take([10, 20, 30, 40], 7)], [10, 20, 30, 40])
@@ -262,5 +261,11 @@ describe('map()', function () {
 		assert.deepStrictEqual(Object.values(actual)[0]!(0), false)
 		assert.deepStrictEqual(map({ a: 'first', b: 32 }, (value, key) => `${key}-${value}`), { a: 'a-first', b: 'b-32' })
 		assert.deepStrictEqual(map({}, () => { }), {})
+	})
+})
+
+describe('integersAscending()', function () {
+	it('generates the correct integers when starting from zero to a positive integer', function () {
+		assert.deepStrictEqual([...integersAscending({ from: 0, to: 3 })], [0, 1, 2, 3])
 	})
 })
